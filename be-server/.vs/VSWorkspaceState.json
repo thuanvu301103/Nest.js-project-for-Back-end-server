@@ -2,12 +2,11 @@
   "ExpandedNodes": [
     "",
     "\\src",
-    "\\src\\database",
     "\\src\\modules",
-    "\\src\\modules\\users",
-    "\\src\\modules\\users\\schemas",
+    "\\src\\modules\\ftp-server",
+    "\\src\\modules\\scripts",
     "\\test"
   ],
-  "SelectedNode": "\\src\\modules\\users\\users.module.ts",
+  "SelectedNode": "\\src\\modules\\ftp-server\\ftp-server.module.ts",
   "PreviewInSolutionExplorer": false
 }
