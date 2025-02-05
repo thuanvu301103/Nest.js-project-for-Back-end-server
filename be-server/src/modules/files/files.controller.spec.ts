@@ -1,15 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { FtpServerController } from './ftp-server.controller';
+import { FilesController } from './files.controller';
 
-describe('FtpServerController', () => {
-  let controller: FtpServerController;
+describe('FilesController', () => {
+  let controller: FilesController;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [FtpServerController],
+      controllers: [FilesController],
     }).compile();
 
-    controller = module.get<FtpServerController>(FtpServerController);
+    controller = module.get<FilesController>(FilesController);
   });
 
   it('should be defined', () => {

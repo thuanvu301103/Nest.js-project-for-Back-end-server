@@ -123,7 +123,7 @@ Explanation:
 ## (Database connection) [be-server/src/database]
 We use MongoDB
 
-## FTP-server connection
+## FTP-server connection foe files storage
 An FTP (File Transfer Protocol) server is a type of server that allows users to transfer files between their local computer and the server. It's commonly used for website maintenance, file sharing, and data storage
 
 ### Steps to set up an FTP server on Windows
@@ -150,47 +150,90 @@ An FTP (File Transfer Protocol) server is a type of server that allows users to 
 	- **Enter Credentials**: Provide the FTP server address, username, and password.
 	- **Access Files**: Verify that you can access and transfer files to and from the FTP server.
 
-### Steps to connect to an FTP server using Nest.js
+### Handle file upload from FE-Server and store them in FTP-Server (takes place in BE-Server)
 
-- **Step 1: Installation**: install the `nestjs-ftp module`
-```bash
-npm install nestjs-ftp
-npm install @nestjs/config
-```
+Create a module named `files`
 
-- **Step 2: Configuration**: configure the FTP module in your `AppModule`:
+#### Set up FTP Server connection
 ```typescript
-import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { FtpModule } from 'nestjs-ftp';
+// files.service.ts
+import { Injectable } from '@nestjs/common';
+import * as ftp from 'basic-ftp';
+import { ConfigService } from '@nestjs/config';
 
-@Module({
-  imports: [
-    ConfigModule,
-    FtpModule.forRootFtpAsync({
-      useFactory: async (config: ConfigService) => {
-        return {
-          host: config.get<string>('FTP_URL'),
-          port: config.get<number>('FTP_PORT'),
-          user: config.get<string>('FTP_USER'),
-          password: config.get<string>('FTP_PASS'),
-          secure: config.get<boolean>('FTP_SECURE'),
-        };
-      },
-      inject: [ConfigService],
-    }),
-  ],
-})
-export class AppModule {}
+@Injectable()
+export class FilesService {
+    private ftpClient: ftp.Client;
+    private ftpHost: string;
+    private ftpUser: string;
+    private ftpPassword: string;
+    private ftpSecure: boolean;
+    private ftpUploadDir: string;
+
+    constructor(private readonly configService: ConfigService) {
+        this.ftpClient = new ftp.Client();
+        this.ftpClient.ftp.verbose = true; // Enable logs for debugging
+        // Load FTP credentials from .env
+        this.ftpHost = this.configService.get<string>('FTP_HOST');
+        this.ftpUser = this.configService.get<string>('FTP_USER');
+        this.ftpPassword = this.configService.get<string>('FTP_PASSWORD');
+        this.ftpSecure = this.configService.get<boolean>('FTP_SECURE') || false;
+        this.ftpUploadDir = this.configService.get<string>('FTP_UPLOAD_DIR') || '/uploads';
+    }
+
+    async connectToFTP() {
+        await this.ftpClient.access({
+            host: this.ftpHost,
+            user: this.ftpUser,
+            password: this.ftpPassword,
+            secure: this.ftpSecure,
+        });
+        console.log(`✅ Connected to FTP: ${this.ftpHost}`);
+    }
+}
 ```
 
-- **Step 3: Environment Configuration**: Make sure to set the FTP server details in your environment configuration file `.env`
+#### Save FTP Credentials in `.env` file
 ```
-FTP_URL=ftp.example.com
-FTP_PORT=21
-FTP_USER=username
-FTP_PASS=password
-FTP_SECURE=true
+FTP_HOST=192.168.2.16
+FTP_USER=anonymous
+FTP_PASSWORD=password
+FTP_SECURE=false
+FTP_UPLOAD_DIR=/uploads
+```
+
+#### Get file from Multer and sent file to FTP Server then delete temporary saved file in BE-Server
+
+```typescript
+// files.service.ts
+async uploadFilesToFTP(files: Express.Multer.File[]) {
+        try {
+            await this.connectToFTP();
+
+            // Ensure remote directory exists
+            await this.ftpClient.ensureDir(this.ftpUploadDir);
+
+            for (const file of files) {
+                const localPath = path.join(__dirname, "../../uploads", file.filename);
+                const remotePath = `${this.ftpUploadDir}/${file.originalname}`;
+
+                // Upload file to FTP
+                await this.ftpClient.uploadFrom(localPath, remotePath);
+                console.log(`✅ Uploaded: ${file.originalname} to ${remotePath}`);
+
+                // Delete local file after upload
+                await fs.remove(localPath);
+                console.log(`🗑️ Deleted local file: ${file.originalname}`);
+            }
+
+            this.ftpClient.close();
+            console.log("✅ All files uploaded and deleted successfully");
+        } catch (error) {
+            console.error("❌ FTP Upload Error:", error);
+            this.ftpClient.close();
+            throw new Error("FTP Upload Failed");
+        }
+    }
 ```
 
 ## Run the application
