@@ -3,9 +3,9 @@
     "",
     "\\src",
     "\\src\\modules",
-    "\\src\\modules\\ftp-server",
-    "\\src\\modules\\scripts",
+    "\\src\\modules\\files",
     "\\test"
   ],
+  "SelectedNode": "\\src\\modules\\files\\files.controller.ts",
   "PreviewInSolutionExplorer": false
 }
